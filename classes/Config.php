@@ -38,7 +38,7 @@ class Config
      *
      * @var array
      */
-    public $params = ['--no-playlist', '--no-warnings', '-f best[protocol^=http]', '--playlist-end', 1];
+    public $params = ['--no-warnings', '--ignore-errors', '--flat-playlist', '--restrict-filenames'];
 
     /**
      * Enable audio conversion.
@@ -55,32 +55,40 @@ class Config
     public $avconv = 'vendor/bin/ffmpeg';
 
     /**
-     * rtmpdump binary path.
-     *
-     * @var string
-     */
-    public $rtmpdump = 'vendor/bin/rtmpdump';
-
-    /**
-     * curl binary path.
-     *
-     * @var string
-     */
-    public $curl = '/usr/bin/curl';
-
-    /**
-     * curl parameters.
-     *
-     * @var array
-     */
-    public $curl_params = [];
-
-    /**
      * Disable URL rewriting.
      *
      * @var bool
      */
     public $uglyUrls = false;
+
+    /**
+     * Stream downloaded files trough server?
+     *
+     * @var bool
+     */
+    public $stream = false;
+
+    /**
+     * Allow to remux video + audio?
+     *
+     * @var bool
+     */
+    public $remux = false;
+
+    /**
+     * MP3 bitrate when converting (in kbit/s).
+     *
+     * @var int
+     */
+    public $audioBitrate = 128;
+
+    /**
+     * avconv/ffmpeg logging level.
+     * Must be one of these: quiet, panic, fatal, error, warning, info, verbose, debug.
+     *
+     * @var string
+     */
+    public $avconvVerbosity = 'error';
 
     /**
      * YAML config file path.
@@ -96,10 +104,7 @@ class Config
      * * youtubedl: youtube-dl binary path
      * * python: Python binary path
      * * avconv: avconv or ffmpeg binary path
-     * * rtmpdump: rtmpdump binary path
-     * * curl: curl binary path
      * * params: Array of youtube-dl parameters
-     * * curl_params: Array of curl parameters
      * * convert: Enable conversion?
      *
      * @param array $options Options
@@ -128,13 +133,13 @@ class Config
      *
      * @return Config
      */
-    public static function getInstance($yamlfile = 'config.yml')
+    public static function getInstance($yamlfile = 'config/config.yml')
     {
         $yamlPath = __DIR__.'/../'.$yamlfile;
         if (is_null(self::$instance) || self::$instance->file != $yamlfile) {
             if (is_file($yamlfile)) {
                 $options = Yaml::parse(file_get_contents($yamlPath));
-            } elseif ($yamlfile == 'config.yml') {
+            } elseif ($yamlfile == 'config/config.yml' || empty($yamlfile)) {
                 /*
                 Allow for the default file to be missing in order to
                 not surprise users that did not create a config file

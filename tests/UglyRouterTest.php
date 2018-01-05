@@ -6,16 +6,14 @@
 namespace Alltube\Test;
 
 use Alltube\UglyRouter;
+use PHPUnit\Framework\TestCase;
 use Slim\Http\Environment;
-use Slim\Http\Headers;
 use Slim\Http\Request;
-use Slim\Http\Stream;
-use Slim\Http\Uri;
 
 /**
  * Unit tests for the UglyRouter class.
  */
-class UglyRouterTest extends \PHPUnit_Framework_TestCase
+class UglyRouterTest extends TestCase
 {
     /**
      * UglyRouter instance.
@@ -43,13 +41,13 @@ class UglyRouterTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(
             [1, 'route0', []],
             $this->router->dispatch(
-                new Request(
-                    'GET',
-                    Uri::createFromString('http://example.com/?page=foo'),
-                    Headers::createFromEnvironment(new Environment()),
-                    [],
-                    [],
-                    new Stream(fopen('php://temp', 'r'))
+                Request::createFromEnvironment(
+                    Environment::mock(
+                        [
+                            'REQUEST_METHOD' => 'GET',
+                            'QUERY_STRING'   => 'page=foo',
+                        ]
+                    )
                 )
             )
         );

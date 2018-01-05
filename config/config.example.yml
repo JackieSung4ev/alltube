@@ -1,0 +1,31 @@
+---
+# Path to your youtube-dl binary
+youtubedl: vendor/rg3/youtube-dl/youtube_dl/__main__.py
+
+# Path to your python binary
+python: /usr/bin/python
+
+# An array of parameters to pass to youtube-dl
+params:
+    - --no-warnings
+    - --ignore-errors
+    - --flat-playlist
+    - --restrict-filenames
+
+# True to enable audio conversion
+convert: false
+
+# Path to your avconv or ffmpeg binary
+avconv: vendor/bin/ffmpeg
+
+# avconv/ffmpeg logging level.
+avconvVerbosity: error
+
+# True to disable URL rewriting
+uglyUrls: false
+
+# True to stream videos through server
+stream: false
+
+# MP3 bitrate when converting (in kbit/s)
+audioBitrate: 128

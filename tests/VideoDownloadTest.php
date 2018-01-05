@@ -7,11 +7,12 @@ namespace Alltube\Test;
 
 use Alltube\Config;
 use Alltube\VideoDownload;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Unit tests for the VideoDownload class.
  */
-class VideoDownloadTest extends \PHPUnit_Framework_TestCase
+class VideoDownloadTest extends TestCase
 {
     /**
      * VideoDownload instance.
@@ -21,11 +22,24 @@ class VideoDownloadTest extends \PHPUnit_Framework_TestCase
     private $download;
 
     /**
+     * Config class instance.
+     *
+     * @var Config
+     */
+    private $config;
+
+    /**
      * Initialize properties used by test.
      */
     protected function setUp()
     {
-        $this->download = new VideoDownload();
+        if (PHP_OS == 'WINNT') {
+            $configFile = 'config_test_windows.yml';
+        } else {
+            $configFile = 'config_test.yml';
+        }
+        $this->config = Config::getInstance('config/'.$configFile);
+        $this->download = new VideoDownload($this->config);
     }
 
     /**
@@ -44,9 +58,8 @@ class VideoDownloadTest extends \PHPUnit_Framework_TestCase
      */
     public function testConstructorWithMissingYoutubedl()
     {
-        new VideoDownload(
-            new Config(['youtubedl' => 'foo'])
-        );
+        $this->config->youtubedl = 'foo';
+        new VideoDownload($this->config);
     }
 
     /**
@@ -57,9 +70,8 @@ class VideoDownloadTest extends \PHPUnit_Framework_TestCase
      */
     public function testConstructorWithMissingPython()
     {
-        new VideoDownload(
-            new Config(['python' => 'foo'])
-        );
+        $this->config->python = 'foo';
+        new VideoDownload($this->config);
     }
 
     /**
@@ -84,11 +96,19 @@ class VideoDownloadTest extends \PHPUnit_Framework_TestCase
      *
      * @return void
      * @dataProvider urlProvider
+     * @dataProvider m3uUrlProvider
+     * @dataProvider rtmpUrlProvider
+     * @dataProvider remuxUrlProvider
      */
-    public function testGetURL($url, $format, $filename, $extension, $domain)
-    {
+    public function testGetURL(
+        $url,
+        $format,
+        /* @scrutinizer ignore-unused */ $filename,
+        /* @scrutinizer ignore-unused */ $extension,
+        $domain
+    ) {
         $videoURL = $this->download->getURL($url, $format);
-        $this->assertContains($domain, $videoURL);
+        $this->assertContains($domain, $videoURL[0]);
     }
 
     /**
@@ -98,7 +118,8 @@ class VideoDownloadTest extends \PHPUnit_Framework_TestCase
      */
     public function testGetURLWithPassword()
     {
-        $this->assertContains('vimeocdn.com', $this->download->getURL('http://vimeo.com/68375962', null, 'youtube-dl'));
+        $videoURL = $this->download->getURL('http://vimeo.com/68375962', null, 'youtube-dl');
+        $this->assertContains('vimeocdn.com', $videoURL[0]);
     }
 
     /**
@@ -146,35 +167,86 @@ class VideoDownloadTest extends \PHPUnit_Framework_TestCase
     {
         return [
             [
-                'https://www.youtube.com/watch?v=M7IpKCZ47pU', null,
-                "It's Not Me, It's You - Hearts Under Fire-M7IpKCZ47pU",
+                'https://www.youtube.com/watch?v=M7IpKCZ47pU', 'best[protocol^=http]',
+                'It_s_Not_Me_It_s_You_-_Hearts_Under_Fire-M7IpKCZ47pU',
                 'mp4',
                 'googlevideo.com',
             ],
             [
                 'https://www.youtube.com/watch?v=RJJ6FCAXvKg', 22,
-                "'Heart Attack' - Demi Lovato ".
-                '(Sam Tsui & Against The Current)-RJJ6FCAXvKg',
+                'Heart_Attack_-_Demi_Lovato_'.
+                'Sam_Tsui_Against_The_Current-RJJ6FCAXvKg',
                 'mp4',
                 'googlevideo.com',
             ],
             [
-                'https://vimeo.com/24195442', null,
-                'Carving the Mountains-24195442',
+                'https://vimeo.com/24195442', 'best[protocol^=http]',
+                'Carving_the_Mountains-24195442',
                 'mp4',
                 'vimeocdn.com',
             ],
             [
                 'http://www.bbc.co.uk/programmes/b039g8p7', 'bestaudio/best',
-                'Leonard Cohen, Kaleidoscope - BBC Radio 4-b039d07m',
+                'Leonard_Cohen_Kaleidoscope_-_BBC_Radio_4-b039d07m',
                 'flv',
                 'bbcodspdns.fcod.llnwd.net',
             ],
             [
                 'http://www.rtl2.de/sendung/grip-das-motormagazin/folge/folge-203-0', 'bestaudio/best',
-                'GRIP sucht den Sommerkönig-folge-203-0',
+                'GRIP_sucht_den_Sommerkonig-folge-203-0',
                 'f4v',
                 'edgefcs.net',
+            ],
+        ];
+    }
+
+    /**
+     * Provides M3U8 URLs for tests.
+     *
+     * @return array[]
+     */
+    public function remuxUrlProvider()
+    {
+        return [
+            [
+                'https://www.youtube.com/watch?v=M7IpKCZ47pU', 'bestvideo+bestaudio',
+                'It_s_Not_Me_It_s_You_-_Hearts_Under_Fire-M7IpKCZ47pU',
+                'mp4',
+                'googlevideo.com',
+            ],
+        ];
+    }
+
+    /**
+     * Provides URLs for remux tests.
+     *
+     * @return array[]
+     */
+    public function m3uUrlProvider()
+    {
+        return [
+            [
+                'https://twitter.com/verge/status/813055465324056576/video/1', 'hls-2176',
+                'The_Verge_-_This_tiny_origami_robot_can_self-fold_and_complete_tasks-813055465324056576',
+                'mp4',
+                'video.twimg.com',
+            ],
+        ];
+    }
+
+    /**
+     * Provides RTMP URLs for tests.
+     *
+     * @return array[]
+     */
+    public function rtmpUrlProvider()
+    {
+        return [
+            [
+                'http://www.canalc2.tv/video/12163', 'rtmp',
+                'Terrasses_du_Numerique-12163',
+                'flv',
+                'vod-flash.u-strasbg.fr',
             ],
         ];
     }
@@ -198,7 +270,9 @@ class VideoDownloadTest extends \PHPUnit_Framework_TestCase
      * @param string $format Format
      *
      * @return void
-     * @dataProvider URLProvider
+     * @dataProvider urlProvider
+     * @dataProvider m3uUrlProvider
+     * @dataProvider rtmpUrlProvider
      */
     public function testGetJSON($url, $format)
     {
@@ -207,8 +281,8 @@ class VideoDownloadTest extends \PHPUnit_Framework_TestCase
         $this->assertObjectHasAttribute('url', $info);
         $this->assertObjectHasAttribute('ext', $info);
         $this->assertObjectHasAttribute('title', $info);
+        $this->assertObjectHasAttribute('extractor_key', $info);
         $this->assertObjectHasAttribute('formats', $info);
-        $this->assertObjectHasAttribute('_filename', $info);
     }
 
     /**
@@ -222,7 +296,7 @@ class VideoDownloadTest extends \PHPUnit_Framework_TestCase
      */
     public function testGetJSONError($url)
     {
-        $videoURL = $this->download->getJSON($url);
+        $this->download->getJSON($url);
     }
 
     /**
@@ -235,6 +309,9 @@ class VideoDownloadTest extends \PHPUnit_Framework_TestCase
      *
      * @return void
      * @dataProvider urlProvider
+     * @dataProvider m3uUrlProvider
+     * @dataProvider rtmpUrlProvider
+     * @dataProvider remuxUrlProvider
      */
     public function testGetFilename($url, $format, $filename, $extension)
     {
@@ -259,14 +336,15 @@ class VideoDownloadTest extends \PHPUnit_Framework_TestCase
     /**
      * Test getAudioFilename function.
      *
-     * @param string $url           URL
-     * @param string $format        Format
-     * @param string $filename      Filename
-     * @param string $domain        Domain
-     * @param string $audioFilename MP3 audio file name
+     * @param string $url      URL
+     * @param string $format   Format
+     * @param string $filename Filename
      *
      * @return void
      * @dataProvider urlProvider
+     * @dataProvider m3uUrlProvider
+     * @dataProvider rtmpUrlProvider
+     * @dataProvider remuxUrlProvider
      */
     public function testGetAudioFilename($url, $format, $filename)
     {
@@ -302,37 +380,122 @@ class VideoDownloadTest extends \PHPUnit_Framework_TestCase
      */
     public function testGetAudioStreamAvconvError($url, $format)
     {
-        $config = \Alltube\Config::getInstance();
-        $config->avconv = 'foobar';
-        $this->download->getAudioStream($url, $format);
+        $this->config->avconv = 'foobar';
+        $download = new VideoDownload($this->config);
+        $download->getAudioStream($url, $format);
     }
 
     /**
-     * Test getAudioStream function without curl or rtmpdump.
+     * Test getAudioStream function with a M3U8 file.
      *
      * @param string $url    URL
      * @param string $format Format
      *
      * @return void
      * @expectedException Exception
-     * @dataProvider      urlProvider
+     * @dataProvider m3uUrlProvider
      */
-    public function testGetAudioStreamCurlError($url, $format)
+    public function testGetAudioStreamM3uError($url, $format)
     {
-        $config = \Alltube\Config::getInstance();
-        $config->curl = 'foobar';
-        $config->rtmpdump = 'foobar';
         $this->download->getAudioStream($url, $format);
     }
 
     /**
-     * Test getAudioStream function with a M3U8 file.
+     * Assert that a stream is valid.
+     *
+     * @param resource $stream Stream
+     *
+     * @return void
+     */
+    private function assertStream($stream)
+    {
+        $this->assertInternalType('resource', $stream);
+        $this->assertFalse(feof($stream));
+    }
+
+    /**
+     * Test getM3uStream function.
+     *
+     * @param string $url    URL
+     * @param string $format Format
+     *
+     * @return void
+     * @dataProvider m3uUrlProvider
+     */
+    public function testGetM3uStream($url, $format)
+    {
+        $this->assertStream(
+            $this->download->getM3uStream(
+                $this->download->getJSON($url, $format)
+            )
+        );
+    }
+
+    /**
+     * Test getRemuxStream function.
+     *
+     * @param string $url    URL
+     * @param string $format Format
+     *
+     * @return void
+     * @dataProvider remuxUrlProvider
+     */
+    public function testGetRemuxStream($url, $format)
+    {
+        $urls = $this->download->getURL($url, $format);
+        if (count($urls) > 1) {
+            $this->assertStream($this->download->getRemuxStream($urls));
+        }
+    }
+
+    /**
+     * Test getRtmpStream function.
+     *
+     * @param string $url    URL
+     * @param string $format Format
+     *
+     * @return void
+     * @dataProvider rtmpUrlProvider
+     */
+    public function testGetRtmpStream($url, $format)
+    {
+        $this->assertStream(
+            $this->download->getRtmpStream(
+                $this->download->getJSON($url, $format)
+            )
+        );
+    }
+
+    /**
+     * Test getM3uStream function without avconv.
+     *
+     * @param string $url    URL
+     * @param string $format Format
      *
      * @return void
      * @expectedException Exception
+     * @dataProvider m3uUrlProvider
      */
-    public function testGetAudioStreamM3uError()
+    public function testGetM3uStreamAvconvError($url, $format)
     {
-        $this->download->getAudioStream('https://twitter.com/verge/status/813055465324056576/video/1', 'best');
+        $this->config->avconv = 'foobar';
+        $download = new VideoDownload($this->config);
+        $video = $download->getJSON($url, $format);
+        $download->getM3uStream($video);
+    }
+
+    /**
+     * Test getPlaylistArchiveStream function without avconv.
+     *
+     * @return void
+     * @requires OS Linux
+     */
+    public function testGetPlaylistArchiveStream()
+    {
+        $video = $this->download->getJSON(
+            'https://www.youtube.com/playlist?list=PLgdySZU6KUXL_8Jq5aUkyNV7wCa-4wZsC',
+            'best'
+        );
+        $this->assertStream($this->download->getPlaylistArchiveStream($video, 'best'));
     }
 }

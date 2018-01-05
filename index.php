@@ -3,32 +3,35 @@
 require_once __DIR__.'/vendor/autoload.php';
 use Alltube\Config;
 use Alltube\Controller\FrontController;
+use Alltube\LocaleManager;
+use Alltube\LocaleMiddleware;
+use Alltube\PlaylistArchiveStream;
 use Alltube\UglyRouter;
+use Alltube\ViewFactory;
+use Slim\App;
 
 if (isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], '/index.php') !== false) {
     header('Location: '.str_ireplace('/index.php', '/', $_SERVER['REQUEST_URI']));
     die;
 }
 
-$app = new \Slim\App();
+stream_wrapper_register('playlist', PlaylistArchiveStream::class);
+
+$app = new App();
 $container = $app->getContainer();
 $config = Config::getInstance();
 if ($config->uglyUrls) {
     $container['router'] = new UglyRouter();
 }
-$container['view'] = function ($c) {
-    $view = new \Slim\Views\Smarty(__DIR__.'/templates/');
+$container['view'] = ViewFactory::create($container);
 
-    $smartyPlugins = new \Slim\Views\SmartyPlugins($c['router'], $c['request']->getUri());
-    $view->registerPlugin('function', 'path_for', [$smartyPlugins, 'pathFor']);
-    $view->registerPlugin('function', 'base_url', [$smartyPlugins, 'baseUrl']);
+if (!class_exists('Locale')) {
+    die('You need to install the intl extension for PHP.');
+}
+$container['locale'] = new LocaleManager($_COOKIE);
+$app->add(new LocaleMiddleware($container));
 
-    $view->registerPlugin('modifier', 'noscheme', 'Smarty_Modifier_noscheme');
-
-    return $view;
-};
-
-$controller = new FrontController($container);
+$controller = new FrontController($container, null, $_COOKIE);
 
 $container['errorHandler'] = [$controller, 'error'];
 
@@ -49,7 +52,12 @@ $app->get(
     [$controller, 'redirect']
 )->setName('redirect');
 $app->get(
-    '/json',
-    [$controller, 'json']
-);
-$app->run();
+    '/locale/{locale}',
+    [$controller, 'locale']
+)->setName('locale');
+
+try {
+    $app->run();
+} catch (\SmartyException $e) {
+    die('Smarty could not compile the template file: '.$e->getMessage());
+}

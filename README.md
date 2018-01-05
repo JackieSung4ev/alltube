@@ -14,16 +14,19 @@ You just have to unzip it on your server and it should be ready to use.
 
 ### From Git
 
-In order to get AllTube working, you need to use [npm](https://www.npmjs.com/) and [Composer](https://getcomposer.org/):
+In order to get AllTube working,
+you need to use [Yarn](https://yarnpkg.com/) and [Composer](https://getcomposer.org/):
 
 ```bash
-npm install
+yarn install
 composer install
 ```
 
 This will download all the required dependencies.
 
-(Note that it will download the ffmpeg binary for 64-bits Linux. If you are on another platform, you might want to specify the path to avconv/ffmpeg in your config file.)
+(Note that it will download the ffmpeg binary for 64-bits Linux.
+If you are on another platform,
+you might want to specify the path to avconv/ffmpeg in your config file.)
 
 You should also ensure that the *templates_c* folder has the right permissions:
 
@@ -31,14 +34,29 @@ You should also ensure that the *templates_c* folder has the right permissions:
 chmod 777 templates_c/
 ```
 
-If your web server is Apache, you need to set the `AllowOverride` setting to `All` or `FileInfo`.
+If your web server is Apache,
+you need to set the `AllowOverride` setting to `All` or `FileInfo`.
+
+#### Update
+
+When updating from Git, you need to run yarn and Composer again:
+
+```bash
+git pull
+yarn install --prod
+composer install
+```
+
+### On Heroku
+
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
 
 ## Config
 
 If you want to use a custom config, you need to create a config file:
 
 ```bash
-cp config.example.yml config.yml
+cp config/config.example.yml config/config.yml
 ```
 
 ## PHP requirements
@@ -112,16 +130,18 @@ server {
 
 ## Other dependencies
 
-You need [avconv](https://libav.org/avconv.html), [rtmpdump](http://rtmpdump.mplayerhq.hu/) and [curl](https://curl.haxx.se/) in order to enable conversions.
+You need [avconv](https://libav.org/avconv.html)
+in order to enable conversions.
 If you don't want to enable conversions, you can disable it in `config.yml`.
 
 On Debian-based systems:
 
 ```bash
-sudo apt-get install libav-tools rtmpdump curl
+sudo apt-get install libav-tools
 ```
 
-You also probably need to edit the `avconv` variable in `config.yml` so that it points to your ffmpeg/avconv binary (`/usr/bin/avconv` on Debian/Ubuntu).
+You also probably need to edit the `avconv` variable in `config.yml`
+so that it points to your ffmpeg/avconv binary (`/usr/bin/avconv` on Debian/Ubuntu).
 
 ## Use as library
 
@@ -158,7 +178,7 @@ You can also have a look at this [example project](https://github.com/Rudloff/al
 
 ## FAQ
 
-Please read the [FAQ](FAQ.md) before reporting any issue.
+Please read the [FAQ](resources/FAQ.md) before reporting any issue.
 
 ## License
 
